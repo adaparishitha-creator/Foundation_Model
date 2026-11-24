@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-This project was developed as part of Computer Vision Assignment 3 at the University of North Carolina at Charlotte. The objective of this assignment is to perform one-shot image classification across 16 image categories using exactly one labeled reference image per class.
+The objective of this assignment is to perform one-shot image classification across 16 image categories using exactly one labeled reference image per class.
 
 I conducted five experiments using different pretrained models, feature extraction techniques, ensemble methods, image augmentation strategies, and reference prototype refinement techniques to investigate their effectiveness in one-shot image classification.
 
