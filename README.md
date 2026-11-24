@@ -8,7 +8,7 @@ I conducted five experiments using different pretrained models, feature extracti
 
 Among the five experiments, the combination of ResNet-50 pretrained on Places365 and SigLIP 2 Base pretrained on WebLI achieved the highest observed test accuracy of 85.25%. This configuration was selected as the final classifier.
 
-The repository contains the complete experimental notebook, original training and testing datasets, exported model artifacts, standalone inference and evaluation scripts, required dependencies, and classification results.
+The repository contains the complete experimental notebook, original test dataset, exported model artifacts, standalone inference and evaluation scripts, required dependencies, and classification results.
 
 ## 2. Dataset
 
@@ -29,13 +29,15 @@ The 16 image categories are Bedroom, Coast, Flower, Forest, Highway, Industrial,
 
 Exactly one labeled reference image from each class was used to construct the corresponding class prototypes.
 
-All pretrained feature extractors were kept frozen throughout the experiments, and no additional fine-tuning was performed. The remaining training images were used for diagnostic validation rather than training the model parameters.
+All pretrained feature extractors were kept frozen throughout the experiments, and no additional fine-tuning was performed. The remaining training images were used for diagnostic validation rather than training the model parameters or constructing additional reference prototypes.
 
 The dataset split information and class ordering are preserved in `dataset_split_manifest.json`.
 
-Both original datasets are included in the root directory of this repository as `train.zip` and `test.zip`.
+The original test dataset is included in the root directory of this repository as `test.zip`.
 
-The training dataset is required for reproducing the original experiments, while only the test dataset is required for evaluating the exported final classifier.
+The original training dataset (`train.zip`) is not included in the repository due to its large file size. It can be obtained from the original Computer Vision Assignment 3 materials.
+
+The training dataset is required for reproducing the original experiments but is not required for evaluating the exported final classifier.
 
 ## 3. Experiments
 
@@ -43,7 +45,9 @@ The training dataset is required for reproducing the original experiments, while
 
 In the first experiment, I used ConvNeXt-Base pretrained on ImageNet-22K and CLIP ViT-L/14 QuickGELU as feature extractors.
 
-The extracted image embeddings were L2-normalized, and cosine similarity was calculated between the reference and evaluation image embeddings. Per-image z-score normalization was applied before combining the similarity scores obtained from both models using equal fusion weights.
+The extracted image embeddings were L2-normalized, and cosine similarity was calculated between the reference and evaluation image embeddings.
+
+Per-image z-score normalization was applied before combining the similarity scores obtained from both models using equal fusion weights.
 
 Results:
 
@@ -65,6 +69,14 @@ Results:
 - Validation accuracy: 84.10%
 - Test accuracy: 85.25%
 
+The individual model test accuracies were:
+
+- ResNet-50 Places365: 83.50%
+- SigLIP 2 Base: 78.75%
+- Combined classifier: 85.25%
+
+The combined classifier performed better than either individual model.
+
 This experiment achieved the highest observed test accuracy among all five experiments and was selected as the final classifier.
 
 ### Experiment 3: ResNet-50 Places365, SigLIP 2 Base, and DINOv2
@@ -73,7 +85,7 @@ In the third experiment, I introduced DINOv2 ViT-B/14 as an additional feature e
 
 The objective was to investigate whether combining three different pretrained feature representations could improve classification performance.
 
-The normalized cosine similarity scores obtained from all three models were combined using equal fusion weights.
+The cosine similarity scores obtained from all three models were independently normalized using per-image z-score normalization and combined using equal fusion weights.
 
 Results:
 
@@ -84,7 +96,7 @@ The addition of DINOv2 did not improve classification accuracy compared to Exper
 
 ### Experiment 4: ResNet-50 Places365, SigLIP 2 Base, and MoCo v2
 
-In the fourth experiment, I combined ResNet-50 Places365, SigLIP 2 Base, and MoCo v2 pretrained ResNet-50.
+In the fourth experiment, I combined ResNet-50 Places365, SigLIP 2 Base, and MoCo v2 pretrained ResNet-50 using the official 200-epoch pretrained checkpoint.
 
 Two approaches were evaluated: original-view classification and multi-view classification.
 
@@ -98,7 +110,9 @@ The multi-view approach used the following image transformations and weights:
 
 The embeddings obtained from the individual views were L2-normalized, combined using weighted averaging, and normalized again before calculating cosine similarity.
 
-The multi-view approach was applied to both reference and evaluation images. The normalized similarity scores obtained from the three pretrained models were combined using equal fusion weights.
+The multi-view approach was applied to both reference and evaluation images.
+
+The similarity scores obtained from the three pretrained models were independently normalized using per-image z-score normalization and combined using equal fusion weights.
 
 Original-view results:
 
@@ -122,6 +136,8 @@ The following reference image transformations and weights were used:
 - Horizontal flip: 0.10
 - Mild center crop: 0.10
 - Cutout: 0.10
+
+The mild center crop retained approximately 90% of the original image dimensions. The Cutout transformation masked approximately 8% of the image area using the ImageNet mean color.
 
 The embeddings obtained from the original and transformed reference images were L2-normalized, combined using weighted averaging, and normalized again to construct the refined class prototypes.
 
@@ -151,13 +167,26 @@ ResNet-50 pretrained on Places365 provides scene-oriented visual representations
 
 The original classification layer is removed, and the model is used as a frozen feature extractor.
 
-The preprocessing procedure consists of resizing the image to 256 x 256, applying a center crop of size 224 x 224, converting the image to a tensor, and applying ImageNet normalization.
+The preprocessing procedure consists of:
+
+- Resizing the image to 256 x 256.
+- Applying a center crop of size 224 x 224.
+- Converting the image to a tensor.
+- Applying ImageNet normalization.
+
+The normalization parameters are:
+
+- Mean: [0.485, 0.456, 0.406]
+- Standard deviation: [0.229, 0.224, 0.225]
 
 ### SigLIP 2 Base
 
 SigLIP 2 Base provides complementary visual representations learned through large-scale vision-language pretraining.
 
-The model is loaded through OpenCLIP using the ViT-B-16-SigLIP2 architecture and WebLI pretrained weights.
+The model is loaded through OpenCLIP using the following configuration:
+
+- Model architecture: ViT-B-16-SigLIP2
+- Pretrained weights: webli
 
 The corresponding pretrained evaluation transformations provided by OpenCLIP are used for image preprocessing.
 
@@ -174,17 +203,22 @@ The corresponding pretrained evaluation transformations provided by OpenCLIP are
 
 The final fusion score is calculated as:
 
-Final Score = 0.5 * ResNet Score + 0.5 * SigLIP Score
+```text
+Final Score = 0.5 * Normalized ResNet Score
+            + 0.5 * Normalized SigLIP Score
+```
 
-The reference class prototypes and final model configuration have been exported and included in this repository. Therefore, the final classifier can be reconstructed without repeating the original experiments or performing additional training.
+Per-image z-score normalization is performed across the 16 class similarity scores independently for each model. This helps reduce differences in the similarity score distributions before combining the scores.
+
+The reference class prototypes and final model configuration have been exported and included in this repository.
+
+Therefore, the final classifier can be reconstructed without repeating the original experiments or performing additional training.
 
 ## 5. Repository Files
 
 The following files are included in this repository:
 
 - `ComputerVision_Assignment3_Final_GoogleColab.ipynb`: Contains the complete implementation of all five experiments, including dataset preparation, one-shot reference selection, feature extraction, classification, experimental comparisons, and final model export.
-
-- `train.zip`: Contains the original training dataset provided for Computer Vision Assignment 3.
 
 - `test.zip`: Contains the original test dataset provided for Computer Vision Assignment 3.
 
@@ -196,7 +230,7 @@ The following files are included in this repository:
 
 - `inference.py`: Reconstructs the final classifier, automatically downloads the required pretrained weights, loads the saved reference prototypes, and performs image classification.
 
-- `evaluate.py`: Extracts test dataset, evaluates the final classifier, calculates the overall and per-class classification accuracy, and saves the evaluation results.
+- `evaluate.py`: Extracts the test dataset, evaluates the final classifier, calculates the overall and per-class classification accuracy, and saves the evaluation results.
 
 - `requirements.txt`: Contains the required Python dependencies for executing the standalone implementation.
 
@@ -208,7 +242,9 @@ The following files are included in this repository:
 
 - `README.md`: Contains the project description, experimental observations, and instructions for recreating and evaluating the final classifier.
 
-The original datasets, reference class prototypes, and model configuration are included in the repository.
+The original test dataset, reference class prototypes, and model configuration are included in the repository.
+
+The original training dataset is not included due to its large file size. However, it is not required for evaluating the exported final classifier.
 
 The large pretrained checkpoint files are not included in the repository because they are downloaded automatically during execution.
 
@@ -245,9 +281,11 @@ All these dependencies are listed in `requirements.txt`.
 
 The following steps explain how to download the repository, configure the Python environment, prepare the dataset directory, reconstruct the final classifier, and reproduce the reported test accuracy.
 
-The original datasets, final model configuration, and reference class prototypes are already included in the repository.
+The original test dataset, final model configuration, and reference class prototypes are already included in the repository.
 
-There is no need to obtain the datasets from an external source, repeat the original experiments, or perform additional model training to evaluate the final classifier.
+There is no need to obtain the test dataset from an external source, repeat the original experiments, or perform additional model training to evaluate the final classifier.
+
+The original training dataset is not required for this evaluation.
 
 ### Step 1: Download the GitHub Repository
 
@@ -287,10 +325,11 @@ Foundation_Model/
     per_class_accuracy.csv
     requirements.txt
     test_predictions.csv
-    train.zip
     test.zip
     README.md
 ```
+
+The downloaded repository folder may be named `Foundation_Model-main` when downloaded using the Download ZIP option.
 
 ### Step 2: Create and Activate a Python Virtual Environment
 
@@ -330,7 +369,7 @@ python -m pip install --upgrade pip
 
 For a CPU-only Windows environment, install PyTorch and TorchVision using the official CPU wheel index:
 
-```powershell
+```bash
 python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ```
 
@@ -356,7 +395,7 @@ The implementation automatically detects whether CUDA is available and selects t
 
 ### Step 4: Prepare the Dataset Directory
 
-Both `train.zip` and `test.zip` are already included in the root directory of the downloaded GitHub repository.
+The original test dataset (`test.zip`) is already included in the root directory of the downloaded GitHub repository.
 
 Create a new folder named `data` inside the downloaded repository.
 
@@ -366,42 +405,39 @@ The folder can be created manually or by executing the following command from th
 mkdir data
 ```
 
-Move the existing `train.zip` and `test.zip` files from the root directory into the newly created `data` folder.
+Move the existing `test.zip` file from the root directory into the newly created `data` folder.
 
-This can be done manually using the file explorer or by executing the following commands.
+This can be done manually using the file explorer or by executing the following command.
 
 For Windows PowerShell:
 
 ```powershell
-Move-Item train.zip data/
 Move-Item test.zip data/
 ```
 
 For Linux or macOS:
 
 ```bash
-mv train.zip data/
 mv test.zip data/
 ```
 
-If the files have already been moved manually, these commands do not need to be executed.
+If the file has already been moved manually, the corresponding command does not need to be executed.
 
-The dataset files should now be available at following locations:
+The test dataset should now be available at the following location:
 
 ```text
-data/train.zip
 data/test.zip
 ```
 
 The evaluation script specifically expects the test dataset at `data/test.zip`.
 
-There is no need to download the datasets separately because both ZIP files are already included in the repository.
+There is no need to download the test dataset separately because it is already included in the repository.
 
-The original internal directory structure of both ZIP files should remain unchanged.
+The original internal directory structure of the ZIP file should remain unchanged.
 
-There is no need to manually extract the ZIP files. The `evaluate.py` script automatically extracts the test dataset during execution.
+There is no need to manually extract the ZIP file because the `evaluate.py` script automatically extracts the test dataset during execution.
 
-The training dataset is not required for evaluating the exported final classifier because the reference class prototypes are already included in the repository. It is included for reproducing the original experiments.
+The original training dataset (`train.zip`) is not included in the repository due to its large file size. It is not required for evaluating the exported final classifier because the reference class prototypes are already included in the repository.
 
 After completing this step, the repository should have the following structure:
 
@@ -409,7 +445,6 @@ After completing this step, the repository should have the following structure:
 Foundation_Model/
 
     data/
-        train.zip
         test.zip
 
     ComputerVision_Assignment3_Final_GoogleColab.ipynb
@@ -431,9 +466,9 @@ The existing model configuration and reference prototype files should remain in 
 
 There is no need to manually create the `artifacts`, `checkpoints`, or `outputs` folders.
 
-The implementation automatically creates the required checkpoint and output directories during execution.
+The implementation automatically creates required checkpoint and output directories during execution.
 
-Once the dataset ZIP files have been placed inside the `data` folder, the dataset preparation is complete.
+Once the `test.zip` file has been placed inside the `data` folder, the dataset preparation is complete.
 
 ### Step 5: Automatic Pretrained Checkpoint Downloads
 
@@ -472,7 +507,7 @@ There is no need to:
 - Copy checkpoint files from another system.
 - Modify the pretrained model paths in the Python scripts.
 
-The initial execution requires an active internet connection if the pretrained weights are not already available.
+The initial execution requires active internet connection if the pretrained weights are not already available.
 
 The first execution may take longer because of the pretrained checkpoint downloads. The download time depends on the internet connection speed and availability of the pretrained model sources.
 
@@ -482,7 +517,7 @@ If a Windows symlink warning or Hugging Face authentication warning appears duri
 
 ### Step 6: Execute Final Model Evaluation
 
-After installing the required Python libraries and placing the dataset ZIP files inside the `data` folder, execute the following command from the repository directory:
+After installing the required Python libraries and placing the `test.zip` file inside the `data` folder, execute the following command from the repository directory:
 
 ```bash
 python evaluate.py --batch-size 8
@@ -507,7 +542,7 @@ The implementation automatically performs the following operations:
 15. Calculates the overall and per-class classification accuracy.
 16. Creates the outputs folder and saves the evaluation results.
 
-The expected evaluation results are:
+The expected evaluation results, based on the verified executions, are:
 
 ```text
 Model: ResNet-50 Places365 + SigLIP 2 Base
@@ -522,13 +557,13 @@ The total execution time may vary depending on the hardware configuration, inter
 
 Minor numerical differences may occur across hardware platforms and library versions.
 
-If the system has limited available memory, then smaller batch size can be used:
+If the system has limited available memory, a smaller batch size can be used:
 
 ```bash
 python evaluate.py --batch-size 4
 ```
 
-Changing the batch size does not change the classification methodology.
+Changing the batch size does not change the classification methodology. However, batch size 8 was used for the verified local evaluation results reported in this repository. Batch size 4 is provided as an optional alternative for systems with limited memory and was not separately evaluated.
 
 ### Step 7: Verify the Generated Evaluation Results
 
@@ -548,11 +583,13 @@ The `evaluation_summary.json` file contains the overall classification accuracy,
 
 The `per_class_accuracy.csv` file contains the classification results for each of the 16 image categories.
 
-The `test_predictions.csv` file contains the individual test image predictions and corresponding evaluation information.
+The `test_predictions.csv` file contains individual test image predictions and corresponding evaluation information.
 
-The evaluation result files already included in the root directory of the repository are from the completed local evaluation. The newly generated files inside the `outputs` folder contain the results of the current execution.
+The evaluation result files already included in the root directory of the repository are from the completed local evaluation.
 
-There is no need to manually create the outputs folder.
+The newly generated files inside the `outputs` folder contain the results of the current execution.
+
+There is no need to manually create outputs folder.
 
 After successful execution, the original test dataset will also be extracted inside the `data` folder, and the required pretrained model weights will be stored locally.
 
@@ -564,7 +601,7 @@ The following operations need to be performed manually:
 2. Create and activate the Python virtual environment.
 3. Install the required Python dependencies.
 4. Create a folder named `data` inside the downloaded repository.
-5. Move the existing `train.zip` and `test.zip` files into the `data` folder.
+5. Move the existing `test.zip` file into the `data` folder.
 6. Execute `python evaluate.py --batch-size 8`.
 
 The following operations are handled automatically by the implementation:
@@ -584,9 +621,9 @@ The following operations are handled automatically by the implementation:
 - Outputs folder creation
 - Evaluation result generation
 
-Both the original training and testing datasets are already included in the repository.
+The original test dataset is already included in the repository. The original training dataset is not required for evaluating the exported final classifier.
 
-There is no need to obtain the datasets separately, manually extract the test dataset, create the checkpoints folder, download pretrained weights, create an artifacts folder, repeat the five experiments, or perform additional model training.
+There is no need to obtain the test dataset separately, manually extract the test dataset, create the checkpoints folder, manually download pretrained weights, create an artifacts folder, repeat the five experiments, or perform additional model training.
 
 ## 8. Single-Image Classification
 
@@ -604,13 +641,15 @@ The image can be provided using either an absolute or relative file path.
 
 For example, after extracting the test dataset through the evaluation script, the path of an existing image from one of the test class folders can be provided as input.
 
-The program displays classification prediction for the provided image.
+The program displays the classification prediction for the provided image.
 
 The complete test dataset is not required for single-image classification.
 
 The saved reference class prototypes and model configuration included in the repository are used to reconstruct the final classifier.
 
 If the required pretrained weights are not already available, they are downloaded automatically.
+
+The classifier predicts one of the 16 image categories used in this assignment.
 
 ## 9. Reproducing All Five Experiments in Google Colab
 
@@ -632,28 +671,36 @@ https://colab.research.google.com/
 
 In Google Colab, select Runtime and then Change runtime type.
 
-Select a GPU hardware accelerator, such as T4 GPU.
+Select a GPU hardware accelerator, such as a T4 GPU.
 
 GPU execution is recommended for reproducing the complete experiments because multiple pretrained models and image augmentation strategies are evaluated.
 
 ### Step 3: Prepare the Original Datasets
 
-Both the original training and testing datasets are included in the root directory of the GitHub repository.
+Both the original training and testing datasets are required for reproducing all five experiments.
 
-Download the following files from the repository:
+The required dataset files are:
 
 - `train.zip`
 - `test.zip`
 
-If the datasets have already been downloaded as part of the complete repository, use the existing ZIP files.
+The original test dataset (`test.zip`) is included in the root directory of the GitHub repository.
 
-Upload both ZIP files to the Google Colab runtime.
+The original training dataset (`train.zip`) is not included in the repository due to its large file size. It can be obtained from the original Computer Vision Assignment 3 materials.
+
+Download the test dataset from the repository and obtain the original training dataset from the assignment materials.
+
+If the original dataset files are already available locally, the existing ZIP files can be used.
+
+Upload both ZIP files to the Google Colab runtime or make them available through the storage location configured in the notebook.
 
 Configure their locations according to the dataset path definitions in the notebook.
 
 The original internal directory structure of both ZIP archives should remain unchanged.
 
 Dataset extraction is handled by the notebook.
+
+The training dataset is required for reproducing the original experiments but is not required for evaluating the exported final classifier using the standalone evaluation script.
 
 ### Step 4: Execute the Notebook
 
@@ -679,6 +726,10 @@ The original dataset files and reference image selection procedure should be pre
 
 The provided `dataset_split_manifest.json` file can be used to verify the reference image selection and class ordering.
 
+An active internet connection is required for installing the necessary libraries and downloading any missing pretrained model weights.
+
+The execution time may vary depending on the GPU configuration, available memory, internet connection, and model cache availability.
+
 ### Step 5: Review the Experimental Results
 
 After executing the notebook, review the validation and test accuracy obtained from each experiment.
@@ -687,7 +738,7 @@ Experiment 2 achieved the highest observed test accuracy of 85.25%.
 
 The notebook also contains the procedure used to export the final Experiment 2 reference class prototypes and model configuration.
 
-Executing the complete notebook is only necessary when reproducing the original five experiments.
+Executing the complete notebook is necessary when reproducing all five original experiments.
 
 For evaluating the already exported final classifier, the standalone evaluation procedure described in Section 7 is sufficient.
 
@@ -722,6 +773,7 @@ The results obtained from the three execution configurations are provided below.
 - Operating system: Windows
 - Python version: 3.10.11
 - Execution device: CPU
+- Batch size: 8
 - Total test images: 400
 - Correct predictions: 341
 - Incorrect predictions: 59
@@ -734,6 +786,7 @@ The results obtained from the three execution configurations are provided below.
 - Operating system: Windows
 - Python version: 3.10.11
 - Execution device: CPU
+- Batch size: 8
 - Total test images: 400
 - Correct predictions: 341
 - Incorrect predictions: 59
@@ -743,13 +796,17 @@ The results obtained from the three execution configurations are provided below.
 
 The same overall classification accuracy was obtained in all three execution configurations.
 
+The reported execution times are specific to the corresponding execution environments and should not be interpreted as a direct hardware performance comparison.
+
 Automatic checkpoint downloading was verified during the original local evaluation, while compatibility with the downloaded GitHub repository structure was verified separately using the existing Python environment and cached pretrained weights.
 
-The original training and testing datasets were subsequently included in the repository to simplify dataset preparation for reproduction.
+The original test dataset was subsequently included in the repository to simplify dataset preparation for reproduction.
+
+The original training dataset was not included due to its large file size and is not required for evaluating the exported final classifier.
 
 ## 11. Per-Class Classification Results
 
-The final Experiment 2 classifier achieved the following classification results:
+The final Experiment 2 classifier achieved following classification results:
 
 - Bedroom: 20 out of 25 images, 80.00%
 - Coast: 25 out of 25 images, 100.00%
@@ -787,7 +844,9 @@ Through these experiments, I observed that combining complementary pretrained fe
 
 ResNet-50 pretrained on Places365 provided useful scene-oriented features, while SigLIP 2 Base provided complementary visual representations.
 
-The combination of ResNet-50 Places365 and SigLIP 2 Base performed better than the combination of ConvNeXt and CLIP evaluated in Experiment 1.
+Individually, ResNet-50 Places365 achieved a test accuracy of 83.50%, and SigLIP 2 Base achieved a test accuracy of 78.75%. Combining both models increased the test accuracy to 85.25%.
+
+The combination of ResNet-50 Places365 and SigLIP 2 Base also performed better than the combination of ConvNeXt and CLIP evaluated in Experiment 1.
 
 Adding DINOv2 as an additional feature extractor did not improve classification accuracy. Similarly, the multi-view augmentation approach evaluated in Experiment 4 did not improve classification performance compared to its original-view configuration.
 
@@ -797,11 +856,17 @@ These observations indicate that increasing the number of pretrained models or a
 
 One limitation of the one-shot classification approach is that each class is represented by only one labeled reference image. If the selected image is not sufficiently representative of all the visual variations within a class, classification performance may decrease.
 
-This limitation is particularly relevant to challenging categories such as OpenCountry and InsideCity.
+This limitation may be particularly relevant to challenging categories such as OpenCountry and InsideCity.
 
 Experiment 2 was selected based on the observed test accuracy across the completed experiments. Therefore, the reported test accuracy represents the best observed experimental performance rather than an independent post-selection estimate of generalization performance.
 
 Another limitation is that the standalone implementation downloads pretrained weights from external sources. Successful first-time execution depends on the availability of these sources and a compatible Python environment.
+
+The standalone implementation was verified using Python 3.10.11 on Windows. Differences in hardware platforms and library versions may result in minor numerical variations.
+
+Additionally, the original training dataset is not included in the repository due to its large file size. Reproducing all five experiments requires obtaining the original training dataset from the assignment materials.
+
+However, this does not affect the evaluation of the exported final classifier because the saved reference class prototypes and original test dataset are already included in the repository.
 
 ## 13. Conclusion
 
@@ -815,46 +880,19 @@ The experimental results showed that combining complementary pretrained visual r
 
 The reported test accuracy was successfully reproduced in Google Colab, the original local VS Code implementation, and the downloaded GitHub repository.
 
-The final classifier can be reconstructed using the exported reference class prototypes, model configuration, automatically downloaded pretrained model weights, and the test dataset included in the repository without performing additional model training.
+The final classifier can be reconstructed using the exported reference class prototypes, model configuration, and automatically downloaded pretrained model weights.
+
+The original test dataset included in the repository is sufficient to evaluate the final classifier without requiring the original training dataset or performing additional model training.
 
 ## 14. References
 
-Places365:
-
-https://github.com/CSAILVision/places365
-
-SigLIP 2:
-
-https://arxiv.org/abs/2502.14786
-
-OpenCLIP:
-
-https://github.com/mlfoundations/open_clip
-
-ConvNeXt:
-
-https://github.com/facebookresearch/ConvNeXt
-
-CLIP:
-
-https://github.com/openai/CLIP
-
-DINOv2:
-
-https://github.com/facebookresearch/dinov2
-
-MoCo:
-
-https://github.com/facebookresearch/moco
-
-PyTorch:
-
-https://pytorch.org/
-
-TorchVision:
-
-https://pytorch.org/vision/
-
-timm:
-
-https://github.com/huggingface/pytorch-image-models
+- Places365: https://github.com/CSAILVision/places365
+- SigLIP 2: https://arxiv.org/abs/2502.14786
+- OpenCLIP: https://github.com/mlfoundations/open_clip
+- ConvNeXt: https://github.com/facebookresearch/ConvNeXt
+- CLIP: https://github.com/openai/CLIP
+- DINOv2: https://github.com/facebookresearch/dinov2
+- MoCo: https://github.com/facebookresearch/moco
+- PyTorch: https://pytorch.org/
+- TorchVision: https://pytorch.org/vision/
+- timm: https://github.com/huggingface/pytorch-image-models
