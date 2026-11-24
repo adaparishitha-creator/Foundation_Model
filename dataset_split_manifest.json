@@ -1,0 +1,42 @@
+{
+  "random_seed": 42,
+  "class_names": [
+    "Bedroom",
+    "Coast",
+    "Flower",
+    "Forest",
+    "Highway",
+    "Industrial",
+    "InsideCity",
+    "Kitchen",
+    "LivingRoom",
+    "Mountain",
+    "Office",
+    "OpenCountry",
+    "Store",
+    "Street",
+    "Suburb",
+    "TallBuilding"
+  ],
+  "one_shot_training_images": {
+    "Bedroom": "train/train/Bedroom/image_0029.jpg",
+    "Coast": "train/train/Coast/image_0007.jpg",
+    "Flower": "train/train/Flower/image_0121.jpg",
+    "Forest": "train/train/Forest/image_0063.jpg",
+    "Highway": "train/train/Highway/image_0058.jpg",
+    "Industrial": "train/train/Industrial/image_0036.jpg",
+    "InsideCity": "train/train/InsideCity/image_0027.jpg",
+    "Kitchen": "train/train/Kitchen/image_0188.jpg",
+    "LivingRoom": "train/train/LivingRoom/image_0023.jpg",
+    "Mountain": "train/train/Mountain/image_0238.jpg",
+    "Office": "train/train/Office/image_0009.jpg",
+    "OpenCountry": "train/train/OpenCountry/image_0008.jpg",
+    "Store": "train/train/Store/image_0024.jpg",
+    "Street": "train/train/Street/image_0056.jpg",
+    "Suburb": "train/train/Suburb/image_0060.jpg",
+    "TallBuilding": "train/train/TallBuilding/image_0294.jpg"
+  },
+  "training_count": 16,
+  "validation_count": 2384,
+  "test_count": 400
+}
