@@ -16,6 +16,10 @@ import open_clip
 # Project paths
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS_DIR = ROOT / "artifacts"
+
+if not ARTIFACTS_DIR.is_dir():
+    ARTIFACTS_DIR = ROOT
+
 CHECKPOINTS_DIR = ROOT / "checkpoints"
 
 CONFIG_PATH = ARTIFACTS_DIR / "model_config.json"
