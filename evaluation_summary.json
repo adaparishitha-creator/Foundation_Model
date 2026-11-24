@@ -1,0 +1,12 @@
+{
+    "experiment": "Experiment 2",
+    "architecture": "ResNet-50 Places365 + SigLIP 2 Base",
+    "device": "cpu",
+    "number_of_classes": 16,
+    "total_test_images": 400,
+    "correct_predictions": 341,
+    "incorrect_predictions": 59,
+    "test_accuracy_percent": 85.25,
+    "inference_time_seconds": 62.039241200021934,
+    "total_runtime_seconds": 127.71559409998008
+}

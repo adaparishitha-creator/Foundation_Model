@@ -1,0 +1,17 @@
+actual_class,total_images,correct_predictions,accuracy_percent
+Bedroom,25,20,80.0
+Coast,25,25,100.0
+Flower,25,25,100.0
+Forest,25,25,100.0
+Highway,25,25,100.0
+Industrial,25,18,72.0
+InsideCity,25,11,44.0
+Kitchen,25,25,100.0
+LivingRoom,25,24,96.0
+Mountain,25,22,88.0
+Office,25,25,100.0
+OpenCountry,25,1,4.0
+Store,25,24,96.0
+Street,25,24,96.0
+Suburb,25,25,100.0
+TallBuilding,25,22,88.0
